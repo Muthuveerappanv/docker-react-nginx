@@ -1,0 +1,36 @@
+sudo: required
+services:
+  - docker
+
+before_install:
+  - docker build -t muthu8891/docker-multi-test -f ./client/Dockerfile.dev ./client
+
+script:
+  - docker run muthu8891/docker-multi-test npm run test -- --coverage
+
+after_success:
+  - docker build -t muthu8891/multi-client ./client
+  - docker build -t muthu8891/multi-nginx ./nginx
+  - docker build -t muthu8891/multi-server ./server
+  - docker build -t muthu8891/multi-worker ./worker
+  # Log in to Docker account
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+  # Take build images and push to docker hub
+  - docker push muthu8891/multi-client
+  - docker push muthu8891/multi-nginx
+  - docker push muthu8891/multi-server
+  - docker push muthu8891/multi-worker
+
+deploy:
+   provider: "elasticbeanstalk"
+   region: "us-east-1"
+   app: "docker-react"
+   env: "DockerReact-env"
+   bucket_name: "elasticbeanstalk-us-east-1-893636519639"
+   bucket_path: "docker-react"
+   on:
+    branch: master
+   access_key_id: $AWS_ACCESS_KEY
+   secret_access_key:
+    secure: "$AWS_SECRET_KEY"
+    
